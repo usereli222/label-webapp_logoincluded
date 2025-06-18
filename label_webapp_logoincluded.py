@@ -10,17 +10,20 @@ import tempfile
 import re
 import base64
 
-# Setup
+# Config
 st.set_page_config(page_title="Label Generator", layout="centered")
 st.title("📦 Label Generator Web App")
 
-# --- Load Default Logo ---
+# Paths
 DEFAULT_LOGO_PATH = "logo.jpg"
+CUSTOM_FONT_PATH = "MyFont.ttf"
 
+# Load and encode default logo
 def load_image_base64(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
+# Load default logo and font
 try:
     default_logo = Image.open(DEFAULT_LOGO_PATH)
     logo_base64 = load_image_base64(DEFAULT_LOGO_PATH)
@@ -28,13 +31,18 @@ except FileNotFoundError:
     st.error("Default logo file 'logo.jpg' not found.")
     st.stop()
 
-# --- Upload Excel ---
-uploaded_excel = st.file_uploader("📄 Upload Excel File", type=["xlsx", "xls"])
+# Attempt to load custom font
+try:
+    default_font = ImageFont.truetype(CUSTOM_FONT_PATH, 40)
+except Exception as e:
+    st.warning(f"⚠️ Custom font '{CUSTOM_FONT_PATH}' could not be loaded. Using default font.")
+    default_font = ImageFont.load_default()
 
-# --- Optional Custom Logo ---
+# Upload inputs
+uploaded_excel = st.file_uploader("📄 Upload Excel File", type=["xlsx", "xls"])
 uploaded_logo = st.file_uploader("🖼️ Optional: Upload Custom Logo", type=["jpg", "jpeg", "png"])
 
-# --- Show logo preview ---
+# Show logo preview
 if uploaded_logo:
     logo = Image.open(uploaded_logo)
     st.markdown("✅ Using your **custom logo**:")
@@ -50,10 +58,10 @@ else:
         """, unsafe_allow_html=True
     )
 
-# --- Generate Labels ---
+# Generate Labels
 if uploaded_excel and st.button("Generate Labels"):
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Save Excel
+        # Save Excel file
         excel_path = os.path.join(temp_dir, "order.xlsx")
         with open(excel_path, "wb") as f:
             f.write(uploaded_excel.read())
@@ -61,6 +69,7 @@ if uploaded_excel and st.button("Generate Labels"):
         df = pd.read_excel(excel_path)
         content_list = df.values.tolist()
 
+        # Generate filenames like aa, ab, ...
         alphabet = [chr(i) for i in range(97, 123)]
         l0 = [a + b for a in alphabet for b in alphabet]
 
@@ -71,8 +80,9 @@ if uploaded_excel and st.button("Generate Labels"):
             img = logo.copy()
             draw = ImageDraw.Draw(img)
 
+            # Use consistent custom font
             try:
-                font = ImageFont.truetype("arial.ttf", 40)
+                font = ImageFont.truetype(CUSTOM_FONT_PATH, 40)
             except:
                 font = ImageFont.load_default()
 
@@ -82,10 +92,11 @@ if uploaded_excel and st.button("Generate Labels"):
             img_path = os.path.join(temp_dir, f"result{l0[i]}.jpg")
             img.save(img_path)
 
+            # Save first label as preview
             if i == 0:
-                preview_img = img.copy()  # Save the first label as preview
+                preview_img = img.copy()
 
-            # Word doc
+            # Create Word document
             doc = Document()
             doc.add_picture(img_path, width=Inches(3.6))
             safe_name = re.sub(r'[\\/*?:"<>|]', "_", str(row[0]))
@@ -94,7 +105,7 @@ if uploaded_excel and st.button("Generate Labels"):
 
             files_to_zip.append(doc_path)
 
-        # Create ZIP
+        # Zip everything
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zipf:
             for file in files_to_zip:
