@@ -62,15 +62,24 @@ else:
 if uploaded_excel and st.button("Generate Labels"):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Save Excel file
-        excel_path = os.path.join(temp_dir, "order.xlsx")
-        with open(excel_path, "wb") as f:
+        # Get extension from original uploaded file name
+        filename = uploaded_excel.name
+        ext = os.path.splitext(filename)[1].lower()
+
+        # Save file temporarily
+        file_path = os.path.join(temp_dir, f"uploaded{ext}")
+        with open(file_path, "wb") as f:
             f.write(uploaded_excel.read())
 
-        ext = os.path.splitext(excel_path)[1].lower()
+        # Read based on extension
         if ext == ".csv":
-            df = pd.read_csv(excel_path)
+            df = pd.read_csv(file_path)
+        elif ext in [".xls", ".xlsx"]:
+            df = pd.read_excel(file_path)
         else:
-            df = pd.read_excel(excel_path)
+            st.error("Unsupported file type.")
+            st.stop()
+
 
         content_list = df.values.tolist()
 
