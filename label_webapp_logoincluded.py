@@ -39,7 +39,7 @@ except Exception as e:
     default_font = ImageFont.load_default()
 
 # Upload inputs
-uploaded_excel = st.file_uploader("📄 Upload Excel File", type=["xlsx", "xls"])
+uploaded_excel = st.file_uploader("📄 Upload Data File (Excel or CSV)", type=["xlsx", "xls", "csv"])
 uploaded_logo = st.file_uploader("🖼️ Optional: Upload Custom Logo", type=["jpg", "jpeg", "png"])
 
 # Show logo preview
@@ -66,7 +66,12 @@ if uploaded_excel and st.button("Generate Labels"):
         with open(excel_path, "wb") as f:
             f.write(uploaded_excel.read())
 
-        df = pd.read_excel(excel_path)
+        ext = os.path.splitext(excel_path)[1].lower()
+        if ext == ".csv":
+            df = pd.read_csv(excel_path)
+        else:
+            df = pd.read_excel(excel_path)
+
         content_list = df.values.tolist()
 
         # Generate filenames like aa, ab, ...
